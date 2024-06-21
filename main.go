@@ -6,56 +6,17 @@ import (
 	"strings"
 )
 
-/*
-Global variable should be declared with long declaration like "var",
-short delcaration using := not supported
-*/
-var variable1 int = 5
+const GameOverString string = "Game over!"
+const YouWinString string = "Congratulations,you won!"
 
 func main() {
-	fmt.Println("Value for variable1 is :", variable1)
 
-	//array example
-	arrayData := [4]string{"one", "two", "three", "Four"}
-	fmt.Println("data in the array is :", arrayData)
+	word := "racecar"
 
-	//slice example
-	sliceData := []string{"a", "b", "c", "d"}
-	fmt.Println("before appendind Slice Data is :", sliceData)
-
-	//append is possible with slice
-	sliceData = append(sliceData, "e")
-	fmt.Println("after appendind Slice Data is :", sliceData)
-
-	// for loop with iteration example
-	for i := 0; i < len(sliceData); i++ {
-		fmt.Println("value at", i, "is : ", sliceData[i])
-	}
-
-	//map example
-	students := map[string]bool{"Surendra": true, "Vijay": false, "Saurabh": true}
-
-	//example of length
-	fmt.Println("Total number of the students are  ", len(students))
-
-	//example of range and switch
-	for key, value := range students {
-		switch value {
-		case true:
-			fmt.Println(key, ": student is passed")
-		case false:
-			fmt.Println(key, ": student is failed")
-		}
-	}
-
-	//hangman example
-
-	fmt.Println()
-
-	word := "Magnum"
-
+	// lookup for entries made by the user.
 	entries := map[string]bool{}
 
+	// list of "_" corrosponding to the number of letters in the word. [ _ _ _ _ _ ]
 	placeholder := []string{}
 
 	//create placeholder slice matching to length of word
@@ -67,39 +28,70 @@ func main() {
 
 	for {
 
-		concatedString := strings.Join(placeholder, "")
+		// evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
+		userInput := strings.Join(placeholder, "")
 
-		if chances == 0 && concatedString != word {
-			fmt.Println("Game over!")
+		if chances == 0 && userInput != word {
+			fmt.Println(GameOverString)
+			break
+		}
+		// evaluate a win!
+		if userInput == word {
+			fmt.Println(YouWinString)
 			break
 		}
 
+		//Console display
 		fmt.Println()
-		fmt.Println(placeholder)
-
-		if concatedString != word {
-			fmt.Println("You have changes left :", chances)
-		} else {
-			fmt.Println("Congratulations,You won!")
-			break
-		}
+		fmt.Println(placeholder)                 // render the placeholder
+		fmt.Printf("Chances left:%d\n", chances) // render the chances left
 
 		keys := []string{}
 		for key, _ := range entries {
 			keys = append(keys, key)
 		}
 
-		fmt.Println("Guesses: ", keys)
+		fmt.Println("Guesses: ", keys) //show the words/letters guessed till now.
+		fmt.Printf("Guess the word or letter:")
 
-		fmt.Println("Guess the word or letter:")
+		// take the input
 		str := ""
 		fmt.Scanln(&str)
 
-		if !strings.Contains(word, str) {
-			chances--
-			entries[str] = false
-		} else {
-			entries[str] = true
+		if len(str) > 1 { //check input is  word or single character
+			if str == word {
+				fmt.Println(YouWinString)
+				break
+			} else {
+				entries[str] = true
+				chances -= 1
+				continue
+			}
 		}
+
+		//compare and update entries ,placeholder and chances
+
+		_, exist := entries[str]
+
+		if exist {
+			// already exist entry in the guesses
+			continue
+		}
+
+		entries[str] = true
+		found := false // flag to check character found
+
+		//Iterate over the string to check character exists
+		for i, v := range word {
+			if str == string(v) {
+				found = true
+				placeholder[i] = string(v)
+			}
+		}
+		//if not found,decrease the chances
+		if !found {
+			chances -= 1
+		}
+
 	}
 }
