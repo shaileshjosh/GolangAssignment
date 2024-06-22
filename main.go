@@ -2,16 +2,43 @@ package main
 
 //packages are imported using import
 import (
+	"encoding/json"
 	"fmt"
+	"io" // io/ioutil moved to io
+	"net/http"
 	"strings"
 )
 
 const GameOverString string = "Game over!"
 const YouWinString string = "Congratulations,you won!"
+const WordConstant string = "racecar"
+
+func getWord() string {
+	res, err := http.Get("https://random-word-api.herokuapp.com/word?number=5")
+	if err != nil {
+		return WordConstant
+	}
+	body, err := io.ReadAll(res.Body) // get body from res
+	res.Body.Close()
+	if res.StatusCode > 299 { // if status code not 200
+		return WordConstant
+	}
+	if err != nil {
+		return WordConstant
+	}
+	var words []string // array of 5 words
+
+	err = json.Unmarshal(body, &words)
+
+	if err != nil {
+		return WordConstant
+	}
+	return words[0] // return first word
+}
 
 func main() {
 
-	word := "racecar"
+	word := getWord()
 
 	// lookup for entries made by the user.
 	entries := map[string]bool{}
