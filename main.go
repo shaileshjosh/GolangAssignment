@@ -8,7 +8,7 @@ import (
 	"io" // io/ioutil moved to io
 	"net/http"
 	"strings"
-	"sync"
+	"time"
 )
 
 const GameOverString string = "Game over!"
@@ -25,7 +25,7 @@ type HangmanGame struct {
 	Word        string
 }
 
-func play(h *HangmanGame, wg *sync.WaitGroup) {
+func play(h *HangmanGame, result chan bool) {
 
 	// create placeholder slice matching to length of word
 	for i := 0; i < len(h.Word); i++ {
@@ -40,15 +40,15 @@ func play(h *HangmanGame, wg *sync.WaitGroup) {
 		userInput := strings.Join(h.Placeholder, "")
 
 		if chances == 0 && userInput != h.Word {
-			defer wg.Done()
+			result <- false
 			fmt.Println(GameOverString)
-			break
+			return
 		}
 		// evaluate a win!
 		if userInput == h.Word {
-			defer wg.Done()
+			result <- true
 			fmt.Println(YouWinString)
-			break
+			return
 		}
 
 		//Console display
@@ -70,8 +70,9 @@ func play(h *HangmanGame, wg *sync.WaitGroup) {
 
 		if len(str) > 1 { //check input is  word or single character
 			if str == h.Word {
+				result <- true
 				fmt.Println(YouWinString)
-				break
+				return
 			} else {
 				h.Entries[str] = true
 				h.Chances -= 1
@@ -146,9 +147,24 @@ func main() {
 	}
 	hangmanGameStruct.Word = getWord()
 
-	var waitGroup sync.WaitGroup
+	result := make(chan bool)
 
-	waitGroup.Add(1)
-	go play(&hangmanGameStruct, &waitGroup)
-	waitGroup.Wait()
+	timer := time.NewTimer(10 * time.Second)
+
+	go play(&hangmanGameStruct, result)
+
+	for {
+		select {
+		case <-result:
+			fmt.Println("Game Ended")
+			goto END
+		case <-timer.C:
+			fmt.Println("You have timedOut !!!")
+			goto END
+
+		}
+	}
+END:
+	fmt.Println("Play Again..")
+
 }
