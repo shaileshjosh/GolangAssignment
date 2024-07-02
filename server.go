@@ -29,7 +29,7 @@ func (h *HangmanWeb) GetDisplayConn() interface{} {
 	return h.conn
 }
 
-func (h *HangmanWeb) RenderGame(placeholder []string, chances int, entries map[string]bool) {
+func (h *HangmanWeb) RenderGame(placeholder []string, chances int, entries map[string]bool) error {
 
 	keys := []string{}
 	for key, _ := range entries {
@@ -38,6 +38,7 @@ func (h *HangmanWeb) RenderGame(placeholder []string, chances int, entries map[s
 	c := h.GetDisplayConn().(*websocket.Conn)
 	str := fmt.Sprintf("%v Chances left:%d Guesses:%v", placeholder, chances, keys)
 	c.WriteMessage(websocket.TextMessage, []byte(str))
+	return nil
 }
 func (h *HangmanWeb) getInput() string {
 	c := h.GetDisplayConn().(*websocket.Conn)
@@ -69,7 +70,8 @@ func newHandler(w http.ResponseWriter, r *http.Request) {
 	hangman.conn = c
 
 	defer c.Close()
-	if play(&hangman, word) {
+
+	if play(&hangman, word) == true {
 		err = c.WriteMessage(websocket.TextMessage, []byte("You win"))
 	} else {
 		err = c.WriteMessage(websocket.TextMessage, []byte("You hanged up"))

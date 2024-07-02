@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>GolangAssignment: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">GolangAssignment/main.go (37.2%)</option>
+				
+				<option value="file1">GolangAssignment/server.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+//packages are imported using import
+import (
+        "encoding/json"
+        "flag"
+        "fmt"
+        "io" // io/ioutil moved to io
+        "net/http"
+        "strings"
+        "time"
+)
+
+const GameOverString string = "Game over!"
+const YouWinString string = "Congratulations,you won!"
+const WordConstant string = "racecar"
+const MAX_CHANCES int = 8
+
+// 1."dev" is flag 2.false is default value 3."dev mode" is helper text
+var development = flag.Bool("dev", false, "dev mode")
+var addr = flag.String("addr", "localhost:8085", "http service address")
+
+type Hangman interface {
+        RenderGame([]string, int, map[string]bool) error
+        getInput() string
+}
+
+type HangmanTerm struct {
+}
+
+func play(h Hangman, word string) bool <span class="cov8" title="1">{
+
+        Entries := map[string]bool{}
+        Placeholder := []string{}
+        chances := MAX_CHANCES
+        fmt.Println(chances)
+
+        // create placeholder slice matching to length of word
+        for i := 0; i &lt; len(word); i++ </span><span class="cov8" title="1">{
+                Placeholder = append(Placeholder, "_")
+        }</span>
+        <span class="cov8" title="1">timer := time.NewTimer(10 * time.Minute)
+        result := make(chan bool)
+
+        go func() </span><span class="cov8" title="1">{
+                for </span><span class="cov8" title="1">{
+
+                        // evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
+                        userInput := strings.Join(Placeholder, "")
+
+                        if chances == 0 &amp;&amp; userInput != word </span><span class="cov8" title="1">{
+                                result &lt;- false
+                                return
+                        }</span>
+                        // evaluate a win!
+                        <span class="cov8" title="1">if userInput == word </span><span class="cov0" title="0">{
+                                result &lt;- true
+                                return
+                        }</span>
+
+                        //Console display
+                        <span class="cov8" title="1">h.RenderGame(Placeholder, chances, Entries)
+
+                        // take the input
+                        str := h.getInput()
+
+                        if len(str) &gt; 1 </span><span class="cov8" title="1">{ //check input is  word or single character
+                                if str == word </span><span class="cov8" title="1">{
+                                        result &lt;- true
+                                        return
+                                }</span> else<span class="cov8" title="1"> {
+                                        Entries[str] = true
+                                        chances -= 1
+                                        continue</span>
+                                }
+                        }
+
+                        //compare and update entries ,placeholder and chances
+
+                        <span class="cov0" title="0">_, exist := Entries[str]
+
+                        if exist </span><span class="cov0" title="0">{
+                                // already exist entry in the guesses
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">Entries[str] = true
+                        found := false // flag to check character found
+
+                        //Iterate over the string to check character exists
+                        for i, v := range word </span><span class="cov0" title="0">{
+                                if str == string(v) </span><span class="cov0" title="0">{
+                                        found = true
+                                        Placeholder[i] = string(v)
+                                }</span>
+                        }
+                        //if not found,decrease the chances
+                        <span class="cov0" title="0">if !found </span><span class="cov0" title="0">{
+                                chances -= 1
+                        }</span>
+
+                }
+        }()
+
+        <span class="cov8" title="1">for </span><span class="cov8" title="1">{
+                select </span>{
+                case r := &lt;-result:<span class="cov8" title="1">
+                        if r </span><span class="cov8" title="1">{
+                                return true
+                        }</span> else<span class="cov8" title="1"> {
+                                return false
+                        }</span>
+
+                case &lt;-timer.C:<span class="cov0" title="0">
+                        return false</span>
+
+                }
+        }
+
+}
+
+func getWord() string <span class="cov0" title="0">{
+
+        if *development </span><span class="cov0" title="0">{
+                return WordConstant
+        }</span>
+
+        <span class="cov0" title="0">res, err := http.Get("https://random-word-api.herokuapp.com/word?number=5")
+        if err != nil </span><span class="cov0" title="0">{
+                return WordConstant
+        }</span>
+        <span class="cov0" title="0">body, err := io.ReadAll(res.Body) // get body from res
+        res.Body.Close()
+        if res.StatusCode &gt; 299 </span><span class="cov0" title="0">{ // if status code not 200
+                return WordConstant
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return WordConstant
+        }</span>
+
+        <span class="cov0" title="0">var words []string // array of 5 words
+        err = json.Unmarshal(body, &amp;words)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return WordConstant
+        }</span>
+        <span class="cov0" title="0">return words[0]</span> // return first word
+}
+
+func main() <span class="cov0" title="0">{
+
+        flag.Parse() // parse the flag before use
+
+        go webGame()
+
+        hangmanGameStruct := HangmanTerm{}
+
+        result := play(&amp;hangmanGameStruct, getWord())
+        if result </span><span class="cov0" title="0">{
+                fmt.Println("You win!")
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println("You lose")
+        }</span>
+
+}
+
+func (h *HangmanTerm) RenderGame(placeholder []string, chances int, entries map[string]bool) error <span class="cov0" title="0">{
+        //Console display
+        fmt.Println()
+        fmt.Println(placeholder)                 // render the placeholder
+        fmt.Printf("Chances left:%d\n", chances) // render the chances left
+
+        keys := []string{}
+        for key, _ := range entries </span><span class="cov0" title="0">{
+                keys = append(keys, key)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("Guesses: ", keys) //show the words/letters guessed till now.
+        fmt.Printf("Guess the word or letter:")
+        return nil</span>
+}
+func (h *HangmanTerm) getInput() string <span class="cov0" title="0">{
+        str := ""
+        fmt.Scanln(&amp;str)
+        return str
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "fmt"
+        "html/template"
+        "log"
+        "net/http"
+
+        "github.com/gorilla/websocket"
+)
+
+func webGame() <span class="cov0" title="0">{
+        log.SetFlags(0)
+        http.HandleFunc("/new", newHandler)
+        http.HandleFunc("/", home)
+        http.ListenAndServe(*addr, nil)
+        log.Fatal(http.ListenAndServe(*addr, nil))
+
+}</span>
+func home(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        homeTemplate.Execute(w, "ws://"+r.Host+"/new")
+}</span>
+
+type HangmanWeb struct {
+        conn *websocket.Conn
+}
+
+func (h *HangmanWeb) GetDisplayConn() interface{} <span class="cov0" title="0">{
+        return h.conn
+}</span>
+
+func (h *HangmanWeb) RenderGame(placeholder []string, chances int, entries map[string]bool) error <span class="cov0" title="0">{
+
+        keys := []string{}
+        for key, _ := range entries </span><span class="cov0" title="0">{
+                keys = append(keys, key)
+        }</span>
+        <span class="cov0" title="0">c := h.GetDisplayConn().(*websocket.Conn)
+        str := fmt.Sprintf("%v Chances left:%d Guesses:%v", placeholder, chances, keys)
+        c.WriteMessage(websocket.TextMessage, []byte(str))
+        return nil</span>
+}
+func (h *HangmanWeb) getInput() string <span class="cov0" title="0">{
+        c := h.GetDisplayConn().(*websocket.Conn)
+        _, message, err := c.ReadMessage()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("read:", err)
+                return ""
+        }</span>
+
+        <span class="cov0" title="0">return string(message)</span>
+}
+
+var upgrader = websocket.Upgrader{} // use default options
+func newHandler(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+
+        hangman := HangmanWeb{}
+
+        var word string = WordConstant
+        if !*development </span><span class="cov0" title="0">{
+                word = getWord()
+        }</span>
+
+        <span class="cov0" title="0">c, err := upgrader.Upgrade(w, r, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Print("upgrade:", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">hangman.conn = c
+
+        defer c.Close()
+
+        if play(&amp;hangman, word) == true </span><span class="cov0" title="0">{
+                err = c.WriteMessage(websocket.TextMessage, []byte("You win"))
+        }</span> else<span class="cov0" title="0"> {
+                err = c.WriteMessage(websocket.TextMessage, []byte("You hanged up"))
+                err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("word was: %v", word)))
+        }</span>
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                log.Println("write:", err)
+                return
+        }</span>
+
+}
+
+var homeTemplate = template.Must(template.New("").Parse(`
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;script&gt;  
+window.addEventListener("load", function(evt) {
+
+    var output = document.getElementById("output");
+    var input = document.getElementById("input");
+    var ws;
+
+    var print = function(message) {
+        var d = document.createElement("div");
+        d.textContent = message;
+        output.appendChild(d);
+        output.scroll(0, output.scrollHeight);
+    };
+
+    document.getElementById("open").onclick = function(evt) {
+        if (ws) {
+            return false;
+        }
+        ws = new WebSocket("{{.}}");
+        ws.onopen = function(evt) {
+            print("OPEN");
+        }
+        ws.onclose = function(evt) {
+            print("CLOSE");
+            ws = null;
+        }
+        ws.onmessage = function(evt) {
+            print("RESPONSE: " + evt.data);
+        }
+        ws.onerror = function(evt) {
+            print("ERROR: " + evt.data);
+        }
+        return false;
+    };
+
+    document.getElementById("send").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+        print("SEND: " + input.value);
+        ws.send(input.value);
+        return false;
+    };
+
+    document.getElementById("close").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+        ws.close();
+        return false;
+    };
+
+});
+&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;table&gt;
+&lt;tr&gt;&lt;td valign="top" width="50%"&gt;
+&lt;form&gt;
+&lt;button id="open"&gt;Start New Game&lt;/button&gt;
+&lt;p&gt;&lt;input id="input" type="text" value="Hello world!"&gt;
+&lt;button id="send"&gt;Send&lt;/button&gt;
+&lt;/form&gt;
+&lt;/td&gt;&lt;td valign="top" width="50%"&gt;
+&lt;div id="output" style="max-height: 70vh;overflow-y: scroll;"&gt;&lt;/div&gt;
+&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+`))
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

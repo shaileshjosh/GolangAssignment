@@ -21,7 +21,7 @@ var development = flag.Bool("dev", false, "dev mode")
 var addr = flag.String("addr", "localhost:8085", "http service address")
 
 type Hangman interface {
-	RenderGame([]string, int, map[string]bool)
+	RenderGame([]string, int, map[string]bool) error
 	getInput() string
 }
 
@@ -33,13 +33,12 @@ func play(h Hangman, word string) bool {
 	Entries := map[string]bool{}
 	Placeholder := []string{}
 	chances := MAX_CHANCES
-	fmt.Println(chances)
 
 	// create placeholder slice matching to length of word
 	for i := 0; i < len(word); i++ {
 		Placeholder = append(Placeholder, "_")
 	}
-	timer := time.NewTimer(10 * time.Minute)
+	timer := time.NewTimer(10 * time.Second)
 	result := make(chan bool)
 
 	go func() {
@@ -164,7 +163,7 @@ func main() {
 
 }
 
-func (h *HangmanTerm) RenderGame(placeholder []string, chances int, entries map[string]bool) {
+func (h *HangmanTerm) RenderGame(placeholder []string, chances int, entries map[string]bool) error {
 	//Console display
 	fmt.Println()
 	fmt.Println(placeholder)                 // render the placeholder
@@ -177,6 +176,7 @@ func (h *HangmanTerm) RenderGame(placeholder []string, chances int, entries map[
 
 	fmt.Println("Guesses: ", keys) //show the words/letters guessed till now.
 	fmt.Printf("Guess the word or letter:")
+	return nil
 }
 func (h *HangmanTerm) getInput() string {
 	str := ""
