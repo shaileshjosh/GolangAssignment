@@ -14,96 +14,107 @@ import (
 const GameOverString string = "Game over!"
 const YouWinString string = "Congratulations,you won!"
 const WordConstant string = "racecar"
+const MAX_CHANCES int = 8
 
 // 1."dev" is flag 2.false is default value 3."dev mode" is helper text
 var development = flag.Bool("dev", false, "dev mode")
+var addr = flag.String("addr", "localhost:8085", "http service address")
 
-type HangmanGame struct {
-	Entries     map[string]bool
-	Placeholder []string
-	Chances     int
-	Word        string
+type Hangman interface {
+	RenderGame([]string, int, map[string]bool)
+	getInput() string
 }
 
-func play(h *HangmanGame, result chan bool) {
+type HangmanTerm struct {
+}
+
+func play(h Hangman, word string) bool {
+
+	Entries := map[string]bool{}
+	Placeholder := []string{}
+	chances := MAX_CHANCES
+	fmt.Println(chances)
 
 	// create placeholder slice matching to length of word
-	for i := 0; i < len(h.Word); i++ {
-		h.Placeholder = append(h.Placeholder, "_")
+	for i := 0; i < len(word); i++ {
+		Placeholder = append(Placeholder, "_")
 	}
+	timer := time.NewTimer(10 * time.Minute)
+	result := make(chan bool)
 
-	chances := 8
+	go func() {
+		for {
 
-	for {
+			// evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
+			userInput := strings.Join(Placeholder, "")
 
-		// evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
-		userInput := strings.Join(h.Placeholder, "")
-
-		if chances == 0 && userInput != h.Word {
-			result <- false
-			fmt.Println(GameOverString)
-			return
-		}
-		// evaluate a win!
-		if userInput == h.Word {
-			result <- true
-			fmt.Println(YouWinString)
-			return
-		}
-
-		//Console display
-		fmt.Println()
-		fmt.Println(h.Placeholder)               // render the placeholder
-		fmt.Printf("Chances left:%d\n", chances) // render the chances left
-
-		keys := []string{}
-		for key, _ := range h.Entries {
-			keys = append(keys, key)
-		}
-
-		fmt.Println("Guesses: ", keys) //show the words/letters guessed till now.
-		fmt.Printf("Guess the word or letter:")
-
-		// take the input
-		str := ""
-		fmt.Scanln(&str)
-
-		if len(str) > 1 { //check input is  word or single character
-			if str == h.Word {
-				result <- true
-				fmt.Println(YouWinString)
+			if chances == 0 && userInput != word {
+				result <- false
 				return
-			} else {
-				h.Entries[str] = true
-				h.Chances -= 1
+			}
+			// evaluate a win!
+			if userInput == word {
+				result <- true
+				return
+			}
+
+			//Console display
+			h.RenderGame(Placeholder, chances, Entries)
+
+			// take the input
+			str := h.getInput()
+
+			if len(str) > 1 { //check input is  word or single character
+				if str == word {
+					result <- true
+					return
+				} else {
+					Entries[str] = true
+					chances -= 1
+					continue
+				}
+			}
+
+			//compare and update entries ,placeholder and chances
+
+			_, exist := Entries[str]
+
+			if exist {
+				// already exist entry in the guesses
 				continue
 			}
-		}
 
-		//compare and update entries ,placeholder and chances
+			Entries[str] = true
+			found := false // flag to check character found
 
-		_, exist := h.Entries[str]
-
-		if exist {
-			// already exist entry in the guesses
-			continue
-		}
-
-		h.Entries[str] = true
-		found := false // flag to check character found
-
-		//Iterate over the string to check character exists
-		for i, v := range h.Word {
-			if str == string(v) {
-				found = true
-				h.Placeholder[i] = string(v)
+			//Iterate over the string to check character exists
+			for i, v := range word {
+				if str == string(v) {
+					found = true
+					Placeholder[i] = string(v)
+				}
 			}
-		}
-		//if not found,decrease the chances
-		if !found {
-			chances -= 1
-		}
+			//if not found,decrease the chances
+			if !found {
+				chances -= 1
+			}
 
+		}
+	}()
+
+	for {
+		select {
+		case r := <-result:
+			if r {
+				return true
+			} else {
+				return false
+			}
+
+		case <-timer.C:
+			return false
+
+		}
 	}
 
 }
@@ -126,8 +137,8 @@ func getWord() string {
 	if err != nil {
 		return WordConstant
 	}
-	var words []string // array of 5 words
 
+	var words []string // array of 5 words
 	err = json.Unmarshal(body, &words)
 
 	if err != nil {
@@ -140,31 +151,35 @@ func main() {
 
 	flag.Parse() // parse the flag before use
 
-	hangmanGameStruct := HangmanGame{
-		Entries:     map[string]bool{},
-		Placeholder: []string{},
-		Chances:     8,
+	go webGame()
+
+	hangmanGameStruct := HangmanTerm{}
+
+	result := play(&hangmanGameStruct, getWord())
+	if result {
+		fmt.Println("You win!")
+	} else {
+		fmt.Println("You lose")
 	}
-	hangmanGameStruct.Word = getWord()
 
-	result := make(chan bool)
+}
 
-	timer := time.NewTimer(10 * time.Second)
+func (h *HangmanTerm) RenderGame(placeholder []string, chances int, entries map[string]bool) {
+	//Console display
+	fmt.Println()
+	fmt.Println(placeholder)                 // render the placeholder
+	fmt.Printf("Chances left:%d\n", chances) // render the chances left
 
-	go play(&hangmanGameStruct, result)
-
-	for {
-		select {
-		case <-result:
-			fmt.Println("Game Ended")
-			goto END
-		case <-timer.C:
-			fmt.Println("You have timedOut !!!")
-			goto END
-
-		}
+	keys := []string{}
+	for key, _ := range entries {
+		keys = append(keys, key)
 	}
-END:
-	fmt.Println("Play Again..")
 
+	fmt.Println("Guesses: ", keys) //show the words/letters guessed till now.
+	fmt.Printf("Guess the word or letter:")
+}
+func (h *HangmanTerm) getInput() string {
+	str := ""
+	fmt.Scanln(&str)
+	return str
 }
